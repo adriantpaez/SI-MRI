@@ -1,5 +1,6 @@
 import math
 import os
+from tqdm import tqdm
 
 DATA_FOLDER = "./data"
 
@@ -35,7 +36,7 @@ class DataSet:
         self.__calculate_tf_idf__()
 
     def __calculate_tf_idf__(self):
-        for j, d in enumerate(self.documents):
+        for j, d in tqdm(enumerate(self.documents)):
             try:
                 with open(d) as f:
                     for w in f.read().split(' '):
@@ -59,6 +60,7 @@ class MRI:
     def __init__(self, vocabulary_file, documents_folder):
         # Load vocabulary
         self.vocabulary = Vocabulary(vocabulary_file)
+        # Load dataset
         self.dataSet = DataSet(documents_folder, self.vocabulary)
 
 
