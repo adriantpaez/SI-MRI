@@ -5,6 +5,7 @@ import numpy as np
 from svd import factorization
 from utils import multiply_sparse
 from scipy.spatial import distance
+import string
 
 DATA_FOLDER = "./data"
 
@@ -28,6 +29,12 @@ class Vocabulary:
 
     def __len__(self):
         return len(self.items)
+    
+    def vectorize_query(self, query):
+        v=[0 for _ in range(len(self.items))]
+        for word in query:
+            v[self[word]]=1
+        return v
 
 
 class DataSet:
@@ -43,7 +50,11 @@ class DataSet:
         for j, d in tqdm(enumerate(self.documents)):
             try:
                 with open(d) as f:
-                    for w in f.read().split(' '):
+                    doc =f.read()
+                    doc=doc.translate(str.maketrans('', '', string.punctuation+'\n'))
+                    doc=doc.split(' ')
+                    for w in doc:
+                        w=w.lower()
                         if w in self.vocabulary.items:
                             i = self.vocabulary[w]
                             self.__tf__[i][j] += 1
@@ -57,14 +68,15 @@ class DataSet:
         N = len(self.documents)
         for i in range(len(self.vocabulary)):
             for j in range(len(self.documents)):
-                self.W[i][j] = self.__tf__[i][j] * math.log2(N / self.__df__[i])
+                self.W[i][j] = self.__tf__[i][j] * math.log2(N / (1+self.__df__[i]))
         self.svd=factorization(self.W)
         
     def find_relevance(self,query):
         #query q has m dimensions (vocabulary size)
         terms, diag, docs=self.svd
         
-        query_repres= multiply_sparse(query, diag)
+        query_repres=np.matmul(query, terms)
+        query_repres=multiply_sparse(query_repres, diag)
 
         docs=np.transpose(docs)
 
@@ -81,7 +93,13 @@ class MRI:
         self.vocabulary = Vocabulary(vocabulary_file)
         # Load dataset
         self.dataSet = DataSet(documents_folder, self.vocabulary)
-        print(self.dataSet.find_relevance([1, 0, 1, 0, 1, 1, 0]))
+        
+    def __call__(self, query):
+        return self.dataSet.find_relevance(self.vocabulary.vectorize_query(query))
+        
 
 
-MRI(vocabulary_file='vocabulary.txt', documents_folder='data')
+mri=MRI(vocabulary_file='vocabulary1.txt', documents_folder='data1')
+recovered=mri(['dentista'])
+for k in sorted(recovered, key=recovered.get):
+    print(k)
