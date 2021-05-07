@@ -68,7 +68,7 @@ class DataSet:
 
         docs=np.transpose(docs)
 
-        return {i: distance.cosine(query, elem) for i,elem in enumerate(docs)}
+        return {i: distance.cosine(query_repres, elem) for i,elem in enumerate(docs)}
         
         
         
