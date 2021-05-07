@@ -30,10 +30,13 @@ class Vocabulary:
     def __len__(self):
         return len(self.items)
     
-    def vectorize_query(self, query):
+    def vectorize_query(self, query, weights=None):
         v=[0 for _ in range(len(self.items))]
         for word in query:
-            v[self[word]]=1
+            if weights:
+                v[self[word]]=weights[word]
+            else:
+                v[self[word]]=1
         return v
 
 
@@ -83,10 +86,6 @@ class DataSet:
         return {i: distance.cosine(query_repres, elem) for i,elem in enumerate(docs)}
         
         
-        
-        
-
-
 class MRI:
     def __init__(self, vocabulary_file, documents_folder):
         # Load vocabulary
