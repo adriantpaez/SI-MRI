@@ -1,6 +1,10 @@
 import math
 import os
 from tqdm import tqdm
+import numpy as np
+from svd import factorization
+from utils import multiply_sparse
+from scipy.spatial import distance
 
 DATA_FOLDER = "./data"
 
@@ -54,6 +58,21 @@ class DataSet:
         for i in range(len(self.vocabulary)):
             for j in range(len(self.documents)):
                 self.W[i][j] = self.__tf__[i][j] * math.log2(N / self.__df__[i])
+        self.svd=factorization(self.W)
+        
+    def find_relevance(self,query):
+        #query q has m dimensions (vocabulary size)
+        terms, diag, docs=self.svd
+        
+        query_repres= multiply_sparse(query, diag)
+
+        docs=np.transpose(docs)
+
+        return {i: distance.cosine(query, elem) for i,elem in enumerate(docs)}
+        
+        
+        
+        
 
 
 class MRI:
@@ -62,6 +81,7 @@ class MRI:
         self.vocabulary = Vocabulary(vocabulary_file)
         # Load dataset
         self.dataSet = DataSet(documents_folder, self.vocabulary)
+        print(self.dataSet.find_relevance([1, 0, 1, 0, 1, 1, 0]))
 
 
 MRI(vocabulary_file='vocabulary.txt', documents_folder='data')
