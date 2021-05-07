@@ -6,6 +6,8 @@ from svd import factorization
 from utils import multiply_sparse
 from scipy.spatial import distance
 import string
+import json
+from parse import parse_docs
 
 DATA_FOLDER = "./data"
 
@@ -18,7 +20,7 @@ class Vocabulary:
         self.__indexes__ = {}
         print(f'Loading vocabulary from {vocabulary_file}:', end=' ')
         with open(vocabulary_file) as f:
-            self.items = set([w.strip().lower() for w in f.read().split('\n')])
+            self.items = set([key.strip().lower() for key in json.load(f)])
         for i, w in enumerate(self.items):
             self.__indexes__[w] = i
 
@@ -39,7 +41,9 @@ class Vocabulary:
 
 class DataSet:
     def __init__(self, documents_folder, vocabulary: Vocabulary):
-        self.documents = [f'{documents_folder}/{f}' for f in os.listdir(documents_folder)]
+        docs=parse_docs(documents_folder)
+        self.documents=[docs[key] for key in docs]
+        # self.documents = [f'{documents_folder}/{f}' for f in os.listdir(documents_folder)]
         self.vocabulary = vocabulary
         self.W = [[0 for _ in range(len(self.documents))] for _ in range(len(self.vocabulary))]
         self.__tf__ = [[0 for _ in range(len(self.documents))] for _ in range(len(self.vocabulary))]
@@ -99,7 +103,9 @@ class MRI:
         
 
 
-mri=MRI(vocabulary_file='vocabulary1.txt', documents_folder='data1')
-recovered=mri(['dentista'])
+mri=MRI(vocabulary_file='words_dictionary.json', documents_folder='CISI.ALL.json')
+recovered=mri(['cat', 'dog', 'gem'])
 for k in sorted(recovered, key=recovered.get):
     print(k)
+
+
