@@ -62,13 +62,13 @@ def calculate_tf():
         """)
     con.commit()
     vocabulary = con.execute("SELECT id, value FROM vocabulary")
-    for word in vocabulary:
+    for word in tqdm(vocabulary):
         documents = con.execute("SELECT id, title, author, text FROM documents")
         for document in documents:
             tf = document[1].count(word[1]) + document[2].count(word[1]) + document[3].count(word[1])
             con.execute(
                 f'INSERT INTO tf (vocabularyId, documentId, tf) VALUES (\'{word[0]}\', \'{document[0]}\', \'{tf}\')')
-    con.commit()
+        con.commit()
 
 
 def calculate_df():
@@ -84,10 +84,10 @@ def calculate_df():
             """)
     con.commit()
     vocabulary = con.execute("SELECT id, value FROM vocabulary")
-    for word in vocabulary:
+    for word in tqdm(vocabulary):
         df = list(con.execute(f"SELECT COUNT(*) FROM tf WHERE vocabularyId == {word[0]} AND tf > 0"))
         c.execute(f"INSERT INTO df (vocabularyId, df) VALUES ('{word[0]}', '{df[0][0]}')")
-    con.commit()
+        con.commit()
 
 
 def vocabulary_len():
