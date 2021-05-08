@@ -1,110 +1,79 @@
 import math
-import os
-from tqdm import tqdm
 import numpy as np
+import database
 from svd import factorization
 from utils import multiply_sparse
 from scipy.spatial import distance
-import string
-import json
-from parse import parse_docs
-
-DATA_FOLDER = "./data"
-
-VOCABULARY = []
+from database import load_docs, load_vocabulary
+from config import Configuration
 
 
 class Vocabulary:
     def __init__(self, vocabulary_file):
-        self.items: set = None
+        if not Configuration['alreadyInit']:
+            load_vocabulary(vocabulary_file)
+        self.items = database.vocabulary_vector()
+        self.itemsSet = set(self.items)
         self.__indexes__ = {}
-        print(f'Loading vocabulary from {vocabulary_file}:', end=' ')
-        with open(vocabulary_file) as f:
-            self.items = set([key.strip().lower() for key in json.load(f)])
         for i, w in enumerate(self.items):
             self.__indexes__[w] = i
-
-        print(f'{len(self.items)} terms to vocabulary')
 
     def __getitem__(self, word):
         return self.__indexes__[word]
 
-    def __len__(self):
-        return len(self.items)
-    
     def vectorize_query(self, query, weights=None):
-        v=[0 for _ in range(len(self.items))]
+        v = [0 for _ in range(len(self.items))]
         for word in query:
             if weights:
-                v[self[word]]=weights[word]
+                v[self[word]] = weights[word]
             else:
-                v[self[word]]=1
+                v[self[word]] = 1
         return v
 
 
 class DataSet:
-    def __init__(self, documents_folder, vocabulary: Vocabulary):
-        docs=parse_docs(documents_folder)
-        self.documents=[docs[key] for key in docs]
-        # self.documents = [f'{documents_folder}/{f}' for f in os.listdir(documents_folder)]
+    def __init__(self, documents_file, vocabulary: Vocabulary):
+        if not Configuration['alreadyInit']:
+            load_docs(documents_file)
         self.vocabulary = vocabulary
-        self.W = [[0 for _ in range(len(self.documents))] for _ in range(len(self.vocabulary))]
-        self.__tf__ = [[0 for _ in range(len(self.documents))] for _ in range(len(self.vocabulary))]
-        self.__df__ = [0 for _ in range(len(self.vocabulary))]
+        self.W = [[0 for _ in range(database.documents_len())] for _ in range(database.vocabulary_len())]
         self.__calculate_tf_idf__()
 
     def __calculate_tf_idf__(self):
-        for j, d in tqdm(enumerate(self.documents)):
-            try:
-                with open(d) as f:
-                    doc =f.read()
-                    doc=doc.translate(str.maketrans('', '', string.punctuation+'\n'))
-                    doc=doc.split(' ')
-                    for w in doc:
-                        w=w.lower()
-                        if w in self.vocabulary.items:
-                            i = self.vocabulary[w]
-                            self.__tf__[i][j] += 1
-                    for w in self.vocabulary.items:
-                        i = self.vocabulary[w]
-                        if self.__tf__[i][j] != 0:
-                            self.__df__[i] += 1
-            except UnicodeDecodeError:
-                continue
+        database.calculate_tf()
+        database.calculate_df()
 
-        N = len(self.documents)
-        for i in range(len(self.vocabulary)):
-            for j in range(len(self.documents)):
-                self.W[i][j] = self.__tf__[i][j] * math.log2(N / (1+self.__df__[i]))
-        self.svd=factorization(self.W)
-        
-    def find_relevance(self,query):
-        #query q has m dimensions (vocabulary size)
-        terms, diag, docs=self.svd
-        
-        query_repres=np.matmul(query, terms)
-        query_repres=multiply_sparse(query_repres, diag)
+        N = database.documents_len()
+        for i in range(database.vocabulary_len()):
+            df = database.DF(i)
+            for j in range(N):
+                self.W[i][j] = database.TF(i, j) * math.log2(N / (1 + df))
+        self.svd = factorization(self.W)
 
-        docs=np.transpose(docs)
+    def find_relevance(self, query):
+        # Query q has m dimensions (vocabulary size)
+        terms, diag, docs = self.svd
 
-        return {i: distance.cosine(query_repres, elem) for i,elem in enumerate(docs)}
-        
-        
+        query_repres = np.matmul(query, terms)
+        query_repres = multiply_sparse(query_repres, diag)
+
+        docs = np.transpose(docs)
+
+        return {i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
+
+
 class MRI:
-    def __init__(self, vocabulary_file, documents_folder):
+    def __init__(self, vocabulary_file, documents_file):
         # Load vocabulary
         self.vocabulary = Vocabulary(vocabulary_file)
         # Load dataset
-        self.dataSet = DataSet(documents_folder, self.vocabulary)
-        
+        self.dataSet = DataSet(documents_file, self.vocabulary)
+
     def __call__(self, query):
         return self.dataSet.find_relevance(self.vocabulary.vectorize_query(query))
-        
 
 
-mri=MRI(vocabulary_file='words_dictionary.json', documents_folder='CISI.ALL.json')
-recovered=mri(['cat', 'dog', 'gem'])
+mri = MRI(vocabulary_file='vocabulary.txt', documents_file='CISI.ALL.json')
+recovered = mri(['cat', 'dog', 'gem'])
 for k in sorted(recovered, key=recovered.get):
     print(k)
-
-
