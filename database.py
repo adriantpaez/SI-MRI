@@ -59,7 +59,7 @@ def load_vocabulary2():
     if cursosr.rowcount == 0:
         raise Exception("documents table do not exits")
     documents = con.execute("SELECT title, author, text FROM documents")
-    s = set(["NN", "NNS", "NNP", "NNPS", "VB", "VBG", "VBD", "VBN", "VBP", "VBZ"])
+    s = set(["NN", "NNS", "NNP", "NNPS", "VB", "VBG", "VBD", "VBN", "VBP", "VBZ", "JJ", "JJR", "JJS"])
     for document in tqdm(documents, total=documents_len(), unit=' document'):
         for i in range(3):
             for word in nltk.pos_tag(word_tokenize(document[i])):
