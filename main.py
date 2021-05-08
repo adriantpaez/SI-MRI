@@ -4,14 +4,13 @@ import database
 from svd import factorization
 from utils import multiply_sparse
 from scipy.spatial import distance
-from database import load_docs, load_vocabulary
+from database import load_docs, load_vocabulary2
 from config import Configuration
+from tqdm import tqdm
 
 
 class Vocabulary:
-    def __init__(self, vocabulary_file):
-        if not Configuration['alreadyInit']:
-            load_vocabulary(vocabulary_file)
+    def __init__(self):
         self.items = database.vocabulary_vector()
         self.itemsSet = set(self.items)
         self.__indexes__ = {}
@@ -24,31 +23,34 @@ class Vocabulary:
     def vectorize_query(self, query, weights=None):
         v = [0 for _ in range(len(self.items))]
         for word in query:
-            if weights:
-                v[self[word]] = weights[word]
-            else:
-                v[self[word]] = 1
+            if word in self.itemsSet:
+                if weights:
+                    v[self[word]] = weights[word]
+                else:
+                    v[self[word]] = 1
         return v
 
 
 class DataSet:
-    def __init__(self, documents_file, vocabulary: Vocabulary):
+    def __init__(self, documents_file):
         if not Configuration['alreadyInit']:
             load_docs(documents_file)
-        self.vocabulary = vocabulary
+            load_vocabulary2()
+            database.calculate_tf()
+            database.calculate_df()
         self.W = [[0 for _ in range(database.documents_len())] for _ in range(database.vocabulary_len())]
-        self.__calculate_tf_idf__()
+        self.__build_w__()
 
-    def __calculate_tf_idf__(self):
-        database.calculate_tf()
-        database.calculate_df()
-
+    def __build_w__(self):
+        print("Building W matrix")
         N = database.documents_len()
-        for i in range(database.vocabulary_len()):
+        for i in tqdm(range(database.vocabulary_len()), unit=' word'):
             df = database.DF(i)
             for j in range(N):
                 self.W[i][j] = database.TF(i, j) * math.log2(N / (1 + df))
+        print("Building SVD...", end='')
         self.svd = factorization(self.W)
+        print('OK')
 
     def find_relevance(self, query):
         # Query q has m dimensions (vocabulary size)
@@ -64,16 +66,16 @@ class DataSet:
 
 class MRI:
     def __init__(self, vocabulary_file, documents_file):
-        # Load vocabulary
-        self.vocabulary = Vocabulary(vocabulary_file)
         # Load dataset
-        self.dataSet = DataSet(documents_file, self.vocabulary)
+        self.dataSet = DataSet(documents_file)
+        # Load vocabulary
+        self.vocabulary = Vocabulary()
 
     def __call__(self, query):
         return self.dataSet.find_relevance(self.vocabulary.vectorize_query(query))
 
 
 mri = MRI(vocabulary_file='vocabulary.txt', documents_file='CISI.ALL.json')
-recovered = mri(['cat', 'dog', 'gem'])
+recovered = mri(['comaromi', 'study', 'history'])
 for k in sorted(recovered, key=recovered.get):
     print(k)

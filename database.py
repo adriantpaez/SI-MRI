@@ -1,6 +1,8 @@
 import json
 from tqdm import tqdm
 import sqlite3
+import nltk
+from nltk.tokenize import word_tokenize
 
 con = sqlite3.connect('data.sqlite')
 
@@ -25,19 +27,47 @@ def load_docs(docs_file):
         con.commit()
 
 
+def init_vocabulary_table():
+    c = con.cursor()
+    c.execute("DROP TABLE IF EXISTS  vocabulary")
+    con.commit()
+    c.execute("""
+                CREATE TABLE vocabulary (
+                    id integer PRIMARY KEY,
+                    value text NOT NULL UNIQUE
+                );
+            """)
+    con.commit()
+
+
 def load_vocabulary(vocabulary_file):
     print(f'Loading vocabulary from {vocabulary_file}')
     c = con.cursor()
-    c.execute("""
-            CREATE TABLE IF NOT EXISTS vocabulary (
-                id integer PRIMARY KEY,
-                value text NOT NULL
-            );
-        """)
-    con.commit()
+    init_vocabulary_table()
     with open(vocabulary_file) as f:
         for line in tqdm(f):
             c.execute(f'INSERT INTO vocabulary (value) VALUES (\'{line[:-1]}\')')
+        con.commit()
+
+
+def load_vocabulary2():
+    print(f'Build vocabulary from documents')
+    c = con.cursor()
+    init_vocabulary_table()
+    # Check if documents exists
+    cursosr = c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='documents';")
+    if cursosr.rowcount == 0:
+        raise Exception("documents table do not exits")
+    documents = con.execute("SELECT title, author, text FROM documents")
+    s = set(["NN", "NNS", "NNP", "NNPS", "VB", "VBG", "VBD", "VBN", "VBP", "VBZ"])
+    for document in tqdm(documents, total=documents_len(), unit=' document'):
+        for i in range(3):
+            for word in nltk.pos_tag(word_tokenize(document[i])):
+                if word[1] in s:
+                    try:
+                        c.execute("INSERT INTO vocabulary (value) VALUES (?)", (word[0].lower(),))
+                    except sqlite3.IntegrityError:
+                        continue
         con.commit()
 
 
@@ -48,7 +78,7 @@ def vocabulary_vector():
 
 
 def calculate_tf():
-    print("Computing TF for each words in vocabulary")
+    print("Computing TF for each word in vocabulary")
     c = con.cursor()
     c.execute("DROP TABLE IF EXISTS  tf")
     con.commit()
@@ -62,7 +92,7 @@ def calculate_tf():
         """)
     con.commit()
     vocabulary = con.execute("SELECT id, value FROM vocabulary")
-    for word in tqdm(vocabulary):
+    for word in tqdm(vocabulary, total=vocabulary_len(), unit=' word'):
         documents = con.execute("SELECT id, title, author, text FROM documents")
         for document in documents:
             tf = document[1].count(word[1]) + document[2].count(word[1]) + document[3].count(word[1])
@@ -72,7 +102,7 @@ def calculate_tf():
 
 
 def calculate_df():
-    print("Computing DF for each words in vocabulary")
+    print("Computing DF for each word in vocabulary")
     c = con.cursor()
     c.execute("DROP TABLE IF EXISTS  df")
     con.commit()
@@ -84,7 +114,7 @@ def calculate_df():
             """)
     con.commit()
     vocabulary = con.execute("SELECT id, value FROM vocabulary")
-    for word in tqdm(vocabulary):
+    for word in tqdm(vocabulary, total=vocabulary_len(), unit=' word'):
         df = list(con.execute(f"SELECT COUNT(*) FROM tf WHERE vocabularyId == {word[0]} AND tf > 0"))
         c.execute(f"INSERT INTO df (vocabularyId, df) VALUES ('{word[0]}', '{df[0][0]}')")
         con.commit()
