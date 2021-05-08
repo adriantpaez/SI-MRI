@@ -3,3 +3,4 @@ data
 venv
 vocabulary.txt
 data.sqlite
+__pycache__
