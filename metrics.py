@@ -23,3 +23,6 @@ def f1_score(ground_truth, prediction):
     p=precission(ground_truth, prediction)
     r=recall(ground_truth, prediction)
     return (2*p*r)/(p+r)
+
+
+    

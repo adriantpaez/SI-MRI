@@ -52,7 +52,7 @@ class DataSet:
         self.svd = factorization(self.W)
         print('OK')
 
-    def find_relevance(self, query):
+    def find_relevance(self, query, k=None):
         # Query q has m dimensions (vocabulary size)
         terms, diag, docs = self.svd
 
@@ -60,8 +60,12 @@ class DataSet:
         query_repres = multiply_sparse(query_repres, diag)
 
         docs = np.transpose(docs)
-
-        return {i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
+        if k:
+            recovered={i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs[:k])}
+        else:
+            recovered={i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
+        for elem in sorted(recovered, key=recovered.get):
+            yield elem
 
 
 class MRI:
@@ -71,11 +75,11 @@ class MRI:
         # Load vocabulary
         self.vocabulary = Vocabulary()
 
-    def __call__(self, query):
-        return self.dataSet.find_relevance(self.vocabulary.vectorize_query(query))
+    def __call__(self, query, k=None):
+        return self.dataSet.find_relevance(self.vocabulary.vectorize_query(query), k)
 
 
 mri = MRI(vocabulary_file='vocabulary.txt', documents_file='CISI.ALL.json')
-recovered = mri(['comaromi', 'study', 'history'])
-for k in sorted(recovered, key=recovered.get):
-    print(k)
+# recovered = mri(['comaromi', 'study', 'history'])
+# for k in sorted(recovered, key=recovered.get):
+#     print(k)
