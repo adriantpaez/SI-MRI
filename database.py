@@ -65,7 +65,7 @@ def load_vocabulary2():
         for i in range(3):
             for word in nltk.pos_tag(word_tokenize(document[i])):
                 w = word[0].lower()
-                if word[1] in s and re.match(r'([a-z]|[0-9]).*', w):
+                if word[1] in s and re.match(r'([a-z]|[0-9]).*', w) and len(w) > 1:
                     try:
                         c.execute("INSERT INTO vocabulary (value) VALUES (?)", (w,))
                     except sqlite3.IntegrityError:
