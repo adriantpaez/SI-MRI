@@ -42,7 +42,7 @@ class DataSet:
         self.__build_w__()
 
     def __build_w__(self):
-        if config.Configuration['alreadyInit']:
+        if Configuration['alreadyInit']:
             print("Load W from W.npy file")
             self.W = np.load('W.npy')
         else:
