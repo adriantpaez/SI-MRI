@@ -23,12 +23,16 @@ class Vocabulary:
 
     def vectorize_query(self, query, weights=None):
         v = [0 for _ in range(len(self.items))]
+        tf={}
+        N = database.documents_len()
         for word in query:
-            if word in self.itemsSet:
-                if weights:
-                    v[self[word]] = weights[word]
-                else:
-                    v[self[word]] = 1
+            try:
+                tf[word]+=1
+            except KeyError:
+                tf[word]=1
+        for word in query:
+            index=self.__indexes__[word]
+            v[index]= tf[word] * math.log2((N+1) / (0.5 + database.DF(index)))
         return v
 
 
@@ -43,7 +47,7 @@ class DataSet:
         self.__build_w__()
 
     def __build_w__(self):
-        if config.Configuration['alreadyInit']:
+        if Configuration['alreadyInit']:
             print("Load W from W.npy file")
             self.W = np.load('W.npy')
         else:
@@ -55,19 +59,17 @@ class DataSet:
                     self.W[i, j] = database.TF(i, j) * math.log2(N / (1 + df))
             print("Save W matrix to W.npy file")
             np.save('W', self.W)
-            print("Building SVD...", end='')
-            self.svd = factorization(self.W)
-            print('OK')
 
     def find_relevance(self, query, k=None):
         # Query q has m dimensions (vocabulary size)
-        terms, diag, docs = self.svd
+        terms, diag, docs = factorization(self.W, 200)
 
         diag=[1/x for x in diag]
         query_repres=np.dot(np.transpose(terms), query)
 
         query_repres = multiply_sparse(diag, query_repres)
-
+        docs=np.transpose(docs)
+        
         recovered={i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
         for elem in sorted(recovered, key=recovered.get):
             yield elem
@@ -88,6 +90,3 @@ class MRI:
 
 
 mri = MRI(vocabulary_file='vocabulary.txt', documents_file='CISI.ALL.json')
-# recovered = mri(['comaromi', 'study', 'history'])
-# for k in sorted(recovered, key=recovered.get):
-#     print(k)
