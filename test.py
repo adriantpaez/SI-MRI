@@ -6,12 +6,12 @@ def test(query_file, rel_file):
     queries=parse_queries(query_file)
     rels=parse_rel(rel_file)
 
-    for key in queries: 
+    for i,key in enumerate(queries): 
         try:   
             ground_truth=rels[key]
             predicted=[f'{elem}' for elem in mri(queries[key], len(rels[key]))]
-            print(recall(ground_truth, predicted))
-            print(precission(ground_truth, predicted))
+            print(f'recall_{i}: {recall(ground_truth, predicted)}')
+            print(f'precission_{i}: {precission(ground_truth, predicted)}')
         except KeyError:
              pass
         
