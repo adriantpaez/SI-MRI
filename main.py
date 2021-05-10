@@ -1,6 +1,5 @@
 import math
 import numpy as np
-import config
 import database
 from svd import factorization
 from utils import multiply_sparse
