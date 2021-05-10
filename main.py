@@ -63,15 +63,15 @@ class DataSet:
         # Query q has m dimensions (vocabulary size)
         terms, diag, docs = self.svd
 
-        diag=[1/x for x in diag]
-        query_repres=np.dot(np.transpose(terms), query)
+        diag = [1 / x for x in diag]
+        query_repres = np.dot(np.transpose(terms), query)
 
         query_repres = multiply_sparse(diag, query_repres)
 
-        recovered={i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
+        recovered = {i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
         for elem in sorted(recovered, key=recovered.get):
             yield elem
-            k-=1
+            k -= 1
             if not k:
                 return
 

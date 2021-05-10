@@ -3,6 +3,7 @@ from tqdm import tqdm
 import sqlite3
 import nltk
 from nltk.tokenize import word_tokenize
+import re
 
 con = sqlite3.connect('data.sqlite')
 
@@ -95,7 +96,10 @@ def calculate_tf():
     for word in tqdm(vocabulary, total=vocabulary_len(), unit=' word'):
         documents = con.execute("SELECT id, title, author, text FROM documents")
         for document in documents:
-            tf = document[1].count(word[1]) + document[2].count(word[1]) + document[3].count(word[1])
+            tf = len(re.findall(re.escape(word[1]), document[1], re.IGNORECASE))
+            tf += len(re.findall(re.escape(word[1]), document[2], re.IGNORECASE))
+            tf += len(re.findall(re.escape(word[1]), document[3], re.IGNORECASE))
+            # tf = document[1].lower().count(word[1]) + document[2].count(word[1]) + document[3].count(word[1])
             con.execute(
                 f'INSERT INTO tf (vocabularyId, documentId, tf) VALUES (\'{word[0]}\', \'{document[0]}\', \'{tf}\')')
         con.commit()
