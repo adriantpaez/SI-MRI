@@ -27,6 +27,7 @@ class Vocabulary:
         N = database.documents_len()
         #calculates frequency of term in query
         for word in query:
+            word=word.lower()
             try:
                 tf[word]+=1
             except KeyError:
@@ -34,6 +35,7 @@ class Vocabulary:
                 
         #calculates td idf for query as pseudo document
         for word in query:
+            word=word.lower()
             try:
                 index=self.__indexes__[word]
                 v[index]= tf[word] * (math.log2((N+1) / (0.5 + database.DF(index))))
