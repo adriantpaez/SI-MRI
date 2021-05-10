@@ -42,28 +42,33 @@ class DataSet:
         self.__build_w__()
 
     def __build_w__(self):
-        print("Building W matrix")
-        N = database.documents_len()
-        for i in tqdm(range(database.vocabulary_len()), unit=' word'):
-            df = database.DF(i)
-            for j in range(N):
-                self.W[i][j] = database.TF(i, j) * math.log2(N / (1 + df))
-        print("Building SVD...", end='')
-        self.svd = factorization(self.W)
-        print('OK')
+        if config.Configuration['alreadyInit']:
+            print("Load W from W.npy file")
+            self.W = np.load('W.npy')
+        else:
+            print("Building W matrix")
+            N = database.documents_len()
+            for i in tqdm(range(database.vocabulary_len()), unit=' word'):
+                df = database.DF(i)
+                for j in range(N):
+                    self.W[i, j] = database.TF(i, j) * math.log2(N / (1 + df))
+            print("Save W matrix to W.npy file")
+            np.save('W', self.W)
+            # print("Building SVD...", end='')
+            # self.svd = factorization(self.W)
+            # print('OK')
 
     def find_relevance(self, query, k=None):
         # Query q has m dimensions (vocabulary size)
-        terms, diag, docs = self.svd
+        terms, diag, docs = factorization(self.W, 200)
 
-        query_repres = np.matmul(query, terms)
-        query_repres = multiply_sparse(query_repres, diag)
+        diag=[1/x for x in diag]
+        query_repres=np.dot(np.transpose(terms), query)
 
-        docs = np.transpose(docs)
-        if k:
-            recovered={i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs[:k])}
-        else:
-            recovered={i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
+        query_repres = multiply_sparse(diag, query_repres)
+        docs=np.transpose(docs)
+        
+        recovered={i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
         for elem in sorted(recovered, key=recovered.get):
             yield elem
 
