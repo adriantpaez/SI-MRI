@@ -20,18 +20,22 @@ class Vocabulary:
     def __getitem__(self, word):
         return self.__indexes__[word]
 
-    def vectorize_query(self, query, weights=None):
+    def vectorize_query(self, query):
         v = [0 for _ in range(len(self.items))]
         tf={}
         N = database.documents_len()
+        #calculates frequency of term in query
         for word in query:
             try:
                 tf[word]+=1
             except KeyError:
                 tf[word]=1
+                
+        #calculates td idf for query as pseudo document
         for word in query:
             index=self.__indexes__[word]
             v[index]= tf[word] * math.log2((N+1) / (0.5 + database.DF(index)))
+        
         return v
 
 
@@ -60,29 +64,45 @@ class DataSet:
             np.save('W', self.W)
 
     def find_relevance(self, query, k=None):
-        # Query q has m dimensions (vocabulary size)
+        '''
+        Finds documents ordered by relevance in terms of query, using latent semantic indexing. If k is not None, it retrieves k better ranked documents, it returns all ordered documents otherwise.
+        
+        query: vector with size 1 x len(vocabulary)
+        '''
+        
+        # SVD low rank factorization with k=200
         terms, diag, docs = factorization(self.W, 200)
 
+        # Inverse of diagonal eigenvalue matrix (200 x 200 -> 200 x 200)
         diag=[1/x for x in diag]
-        query_repres=np.dot(np.transpose(terms), query)
-
-        query_repres = multiply_sparse(diag, query_repres)
-        docs=np.transpose(docs)
         
+        # query needs to be represented in low rank space
+        # q_200 (200 x 1) = Inverse of diagonal (200 x 200) * Transpose of term matrix (200 x len(vocabulary)) * original query (len(vocabulary) x 1)
+        query_repres=np.dot(np.transpose(terms), query)
+        query_repres = multiply_sparse(diag, query_repres)
+        
+        # cosine distance is used to find latent relation between query (200 x 1) and each document (1 x 200).  
+        # transpond document to make it (200 x 1)
+        docs=np.transpose(docs)     
         recovered={i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
+        
+        #retrieval of k most relevant documents to query
         for elem in sorted(recovered, key=recovered.get):
             yield elem
+            k-=1
+            if not k:
+                return
 
 
 class MRI:
-    def __init__(self, vocabulary_file, documents_file):
+    def __init__(self, documents_file):
         # Load dataset
         self.dataSet = DataSet(documents_file)
         # Load vocabulary
-        self.vocabulary = Vocabulary()
+        self.vocabulary = Vocabulary(vocabulary_file)
 
     def __call__(self, query, k=None):
         return self.dataSet.find_relevance(self.vocabulary.vectorize_query(query), k)
 
 
-mri = MRI(vocabulary_file='vocabulary.txt', documents_file='CISI.ALL.json')
+mri = MRI(documents_file='CISI.ALL.json')
