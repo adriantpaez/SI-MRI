@@ -22,22 +22,22 @@ class Vocabulary:
 
     def vectorize_query(self, query):
         v = [0 for _ in range(len(self.items))]
-        tf={}
+        tf = {}
         N = database.documents_len()
-        #calculates frequency of term in query
+        # calculates frequency of term in query
         for word in query:
-            word=word.lower()
+            word = word.lower()
             try:
-                tf[word]+=1
+                tf[word] += 1
             except KeyError:
-                tf[word]=1
+                tf[word] = 1
 
-        #calculates td idf for query as pseudo document
+        # calculates td idf for query as pseudo document
         for word in query:
-            word=word.lower()
+            word = word.lower()
             try:
-                index=self.__indexes__[word]
-                v[index]= tf[word] * (math.log2((N+1) / (0.5 + database.DF(index))))
+                index = self.__indexes__[word]
+                v[index] = tf[word] * (math.log2((N + 1) / (0.5 + database.DF(index))))
             except KeyError:
                 pass
         return v
@@ -63,10 +63,10 @@ class DataSet:
             for i in tqdm(range(database.vocabulary_len()), unit=' word'):
                 df = database.DF(i)
                 for j in range(N):
-                    self.W[i, j] = database.TF(i, j) * math.log2((N+1) / (0.5 + df))
+                    self.W[i, j] = database.TF(i, j) * math.log2((N + 1) / (0.5 + df))
             print("Save W matrix to W.npy file")
             np.save('W', self.W)
-        self.svd=factorization(self.W, 300)
+        self.svd = factorization(self.W, 300)
 
     def find_relevance(self, query, k=None):
         '''
@@ -79,19 +79,19 @@ class DataSet:
         terms, diag, docs = self.svd
 
         # Inverse of diagonal eigenvalue matrix (200 x 200 -> 200 x 200)
-        diag=[1/x for x in diag]
+        diag = [1 / x for x in diag]
 
         # query needs to be represented in low rank space
         # q_200 (200 x 1) = Inverse of diagonal (200 x 200) * Transpose of term matrix (200 x len(vocabulary)) * original query (len(vocabulary) x 1)
-        query_repres=np.dot(np.transpose(terms), query)
+        query_repres = np.dot(np.transpose(terms), query)
         query_repres = multiply_sparse(diag, query_repres)
 
         # cosine distance is used to find latent relation between query (200 x 1) and each document (1 x 200).
         # transpond document to make it (200 x 1)
-        docs=np.transpose(docs)
-        recovered={i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
+        docs = np.transpose(docs)
+        recovered = {i: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
 
-        #retrieval of k most relevant documents to query
+        # retrieval of k most relevant documents to query
         for elem in sorted(recovered, key=recovered.get):
             yield elem
             k -= 1

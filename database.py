@@ -74,8 +74,8 @@ def load_vocabulary2():
 
 
 def vocabulary_vector():
-    vocabulary = con.execute("SELECT value FROM Vocabulary")
-    result = sorted([x[0] for x in vocabulary])
+    vocabulary = con.execute("SELECT value FROM Vocabulary ORDER BY id")
+    result = [x[0] for x in vocabulary]
     return result
 
 
