@@ -9,10 +9,11 @@ def test(query_file, rel_file):
     for key in queries: 
         try:   
             ground_truth=rels[key]
-            predicted=[elem for elem in mri(queries[key], len(rels[key]))]
+            predicted=[f'{elem}' for elem in mri(queries[key], len(rels[key]))]
             print(recall(ground_truth, predicted))
+            print(precission(ground_truth, predicted))
         except KeyError:
-            pass
+             pass
         
         
     

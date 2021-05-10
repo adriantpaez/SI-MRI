@@ -34,8 +34,11 @@ class Vocabulary:
                 
         #calculates td idf for query as pseudo document
         for word in query:
-            index=self.__indexes__[word]
-            v[index]= tf[word] * (math.log2((N+1) / (0.5 + database.DF(index))))
+            try:
+                index=self.__indexes__[word]
+                v[index]= tf[word] * (math.log2((N+1) / (0.5 + database.DF(index))))
+            except KeyError:
+                pass
         return v
 
 
@@ -59,9 +62,10 @@ class DataSet:
             for i in tqdm(range(database.vocabulary_len()), unit=' word'):
                 df = database.DF(i)
                 for j in range(N):
-                    self.W[i, j] = database.TF(i, j) * math.log2(N / (1 + df))
+                    self.W[i, j] = database.TF(i, j) * math.log2((N+1) / (0.5 + df))
             print("Save W matrix to W.npy file")
             np.save('W', self.W)
+        self.svd=factorization(self.W, 300)
 
     def find_relevance(self, query, k=None):
         '''
@@ -71,7 +75,7 @@ class DataSet:
         '''
         
         # SVD low rank factorization with k=200
-        terms, diag, docs = factorization(self.W, 200)
+        terms, diag, docs = self.svd
 
         # Inverse of diagonal eigenvalue matrix (200 x 200 -> 200 x 200)
         diag=[1/x for x in diag]
@@ -99,7 +103,7 @@ class MRI:
         # Load dataset
         self.dataSet = DataSet(documents_file)
         # Load vocabulary
-        self.vocabulary = Vocabulary(vocabulary_file)
+        self.vocabulary = Vocabulary(   )
 
     def __call__(self, query, k=None):
         return self.dataSet.find_relevance(self.vocabulary.vectorize_query(query), k)
