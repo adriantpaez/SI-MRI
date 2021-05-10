@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import config
 import database
 from svd import factorization
 from utils import multiply_sparse
@@ -38,24 +39,30 @@ class DataSet:
             load_vocabulary2()
             database.calculate_tf()
             database.calculate_df()
-        self.W = [[0 for _ in range(database.documents_len())] for _ in range(database.vocabulary_len())]
+        self.W = np.matrix([[0 for _ in range(database.documents_len())] for _ in range(database.vocabulary_len())])
         self.__build_w__()
 
     def __build_w__(self):
-        print("Building W matrix")
-        N = database.documents_len()
-        for i in tqdm(range(database.vocabulary_len()), unit=' word'):
-            df = database.DF(i)
-            for j in range(N):
-                self.W[i][j] = database.TF(i, j) * math.log2(N / (1 + df))
-        print("Building SVD...", end='')
-        self.svd = factorization(self.W, 200)
-        print('OK')
+        if config.Configuration['alreadyInit']:
+            print("Load W from W.npy file")
+            self.W = np.load('W.npy')
+        else:
+            print("Building W matrix")
+            N = database.documents_len()
+            for i in tqdm(range(database.vocabulary_len()), unit=' word'):
+                df = database.DF(i)
+                for j in range(N):
+                    self.W[i, j] = database.TF(i, j) * math.log2(N / (1 + df))
+            print("Save W matrix to W.npy file")
+            np.save('W', self.W)
+            print("Building SVD...", end='')
+            self.svd = factorization(self.W)
+            print('OK')
 
     def find_relevance(self, query, k=None):
         # Query q has m dimensions (vocabulary size)
         terms, diag, docs = self.svd
-        
+
         diag=[1/x for x in diag]
         query_repres=np.dot(np.transpose(terms), query)
 
