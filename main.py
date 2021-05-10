@@ -98,7 +98,7 @@ class MRI:
         # Load dataset
         self.dataSet = DataSet(documents_file)
         # Load vocabulary
-        self.vocabulary = Vocabulary(vocabulary_file)
+        self.vocabulary = Vocabulary()
 
     def __call__(self, query, k=None):
         return self.dataSet.find_relevance(self.vocabulary.vectorize_query(query), k)
