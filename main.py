@@ -32,7 +32,7 @@ class Vocabulary:
                 tf[word]=1
         for word in query:
             index=self.__indexes__[word]
-            v[index]= tf[word] * math.log2((N+1) / (0.5 + database.DF(index)))
+            v[index]= tf[word] * (math.log2((N+1) / (0.5 + database.DF(index))))
         return v
 
 
