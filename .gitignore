@@ -5,3 +5,4 @@ vocabulary.txt
 data.sqlite
 __pycache__
 W.npy
+config.json

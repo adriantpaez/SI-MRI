@@ -110,4 +110,4 @@ class MRI:
         return self.dataSet.find_relevance(self.vocabulary.vectorize_query(query), k)
 
 
-mri = MRI(documents_file='CRAN.ALL.json')
+mri = MRI(documents_file='CRAN/CRAN.ALL.json')

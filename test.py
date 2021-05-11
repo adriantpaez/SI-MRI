@@ -18,5 +18,5 @@ def test(query_file, rel_file):
         
     
         
-test('CISI.QRY.json', 'CISI.REL.json')   
+test('CRAN/CRAN.QRY.json', 'CRAN/CRAN.REL.json')
     
