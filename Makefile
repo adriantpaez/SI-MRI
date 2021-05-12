@@ -1,6 +1,6 @@
 
 test:
-	python mri/test.py
+	python test.py
 
 server:
-	export FLASK_APP=server.py && flask run
+	python server.py
