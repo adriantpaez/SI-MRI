@@ -1,10 +1,10 @@
 <template>
   <div id="app">
-    <Search />
+    <Search @search="search" />
     <div v-if="results.length > 0" class="mt-3 mx-5">
       <h2>Resultados</h2>
       <div v-for="id in results" :key="id">
-        <Document :id="id" />
+        <DocumentPreview :id="id" />
       </div>
     </div>
   </div>
@@ -12,18 +12,23 @@
 
 <script>
 import Search from "./components/Search.vue";
-import Document from "./components/Document.vue";
+import DocumentPreview from "./components/DocumentPreview.vue";
 
 export default {
   name: "App",
   components: {
     Search,
-    Document,
+    DocumentPreview,
   },
   data() {
     return {
       results: [],
     };
+  },
+  methods: {
+    search(results) {
+      this.results = results;
+    },
   },
 };
 </script>
