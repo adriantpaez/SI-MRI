@@ -89,7 +89,7 @@ class DataSet:
         # cosine distance is used to find latent relation between query (200 x 1) and each document (1 x 200).
         # transpond document to make it (200 x 1)
         docs = np.transpose(docs)
-        recovered = {i+1: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
+        recovered = {i + 1: distance.cosine(query_repres, elem) for i, elem in enumerate(docs)}
 
         # retrieval of k most relevant documents to query
         for elem in sorted(recovered, key=recovered.get):
