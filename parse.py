@@ -29,6 +29,4 @@ def parse_rel(json_file):
     data = {}
     with open(json_file) as jf:
         data = json.load(jf)
-        for key in data:
-            data[key] = [k for k in data[key]]
     return data
