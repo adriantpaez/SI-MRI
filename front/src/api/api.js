@@ -26,3 +26,15 @@ export async function search(query) {
     }
 }
 
+export async function document(id) {
+    try {
+        const response = await axios.get('/document', {
+            params: {
+                id: id
+            }
+        })
+        return response
+    } catch (err) {
+        console.error(err);
+    }
+}

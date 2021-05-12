@@ -1,6 +1,11 @@
 <template>
   <div>
-    <b-card :title="title" :sub-title="author" v-if="!loading">
+    <b-card
+      :title="title"
+      :sub-title="author"
+      v-if="!loading"
+      @click="sendClick"
+    >
       <b-card-text>
         {{ preview }}
       </b-card-text>
@@ -33,6 +38,11 @@ export default {
       this.preview = data.preview;
     });
     this.loading = false;
+  },
+  methods: {
+    sendClick() {
+      this.$emit("click", this.id);
+    },
   },
 };
 </script>
