@@ -27,5 +27,5 @@ def test(query_file, rel_file):
     print(f'average f1: {av_f1/k}')
     
         
-test('new_database.json', 'CRAN/CRAN.REL.json')
+test('CISI/CISI.QRY.json', 'CISI/CISI.REL.json')
     
