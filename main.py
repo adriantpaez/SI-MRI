@@ -5,7 +5,7 @@ from svd import factorization
 from utils import multiply_sparse
 from scipy.spatial import distance
 from database import load_docs, load_vocabulary2
-from config import Configuration
+import config
 from tqdm import tqdm
 
 
@@ -45,7 +45,7 @@ class Vocabulary:
 
 class DataSet:
     def __init__(self, documents_file):
-        if not Configuration['alreadyInit']:
+        if not config.AlreadyInit:
             load_docs(documents_file)
             load_vocabulary2()
             database.calculate_tf()
@@ -54,7 +54,7 @@ class DataSet:
         self.__build_w__()
 
     def __build_w__(self):
-        if Configuration['alreadyInit']:
+        if config.AlreadyInit:
             print("Load W from W.npy file")
             self.W = np.load('W.npy')
         else:
