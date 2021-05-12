@@ -1,5 +1,5 @@
-from numpy.linalg import svd
 import numpy as np
+from numpy.linalg import svd
 
 
 def factorization(adj, reduced_dimension=None):

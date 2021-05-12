@@ -1,15 +1,20 @@
 import json
-from tqdm import tqdm
+import os
+import re
 import sqlite3
+
 import nltk
 from nltk.tokenize import word_tokenize
-import re
+from tqdm import tqdm
 
-con = sqlite3.connect('data.sqlite')
+
+def new_connection():
+    return sqlite3.connect(f'{os.path.dirname(__file__)}/data.sqlite')
 
 
 def load_docs(docs_file):
     print(f'Loading documents from {docs_file}')
+    con = new_connection()
     c = con.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS documents (
@@ -26,9 +31,10 @@ def load_docs(docs_file):
         for key in tqdm(data):
             c.execute(sql, (data[key]['title'], data[key]['author'], data[key]['text']))
         con.commit()
+    con.close()
 
 
-def init_vocabulary_table():
+def init_vocabulary_table(con):
     c = con.cursor()
     c.execute("DROP TABLE IF EXISTS  vocabulary")
     con.commit()
@@ -43,18 +49,21 @@ def init_vocabulary_table():
 
 def load_vocabulary(vocabulary_file):
     print(f'Loading vocabulary from {vocabulary_file}')
+    con = sqlite3.connect(f'{os.path.dirname(__file__)}/data.sqlite')
     c = con.cursor()
-    init_vocabulary_table()
+    init_vocabulary_table(con)
     with open(vocabulary_file) as f:
         for line in tqdm(f):
             c.execute(f'INSERT INTO vocabulary (value) VALUES (\'{line[:-1]}\')')
         con.commit()
+    con.close()
 
 
 def load_vocabulary2():
     print(f'Build vocabulary from documents')
+    con = sqlite3.connect(f'{os.path.dirname(__file__)}/data.sqlite')
     c = con.cursor()
-    init_vocabulary_table()
+    init_vocabulary_table(con)
     # Check if documents exists
     cursosr = c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='documents';")
     if cursosr.rowcount == 0:
@@ -71,16 +80,20 @@ def load_vocabulary2():
                     except sqlite3.IntegrityError:
                         continue
         con.commit()
+    con.close()
 
 
 def vocabulary_vector():
+    con = sqlite3.connect(f'{os.path.dirname(__file__)}/data.sqlite')
     vocabulary = con.execute("SELECT value FROM Vocabulary ORDER BY id")
     result = [x[0] for x in vocabulary]
+    con.close()
     return result
 
 
 def calculate_tf():
     print("Computing TF for each word in vocabulary")
+    con = sqlite3.connect(f'{os.path.dirname(__file__)}/data.sqlite')
     c = con.cursor()
     c.execute("DROP TABLE IF EXISTS  tf")
     con.commit()
@@ -104,10 +117,12 @@ def calculate_tf():
             con.execute(
                 f'INSERT INTO tf (vocabularyId, documentId, tf) VALUES (\'{word[0]}\', \'{document[0]}\', \'{tf}\')')
         con.commit()
+    con.close()
 
 
 def calculate_df():
     print("Computing DF for each word in vocabulary")
+    con = sqlite3.connect(f'{os.path.dirname(__file__)}/data.sqlite')
     c = con.cursor()
     c.execute("DROP TABLE IF EXISTS  df")
     con.commit()
@@ -123,27 +138,56 @@ def calculate_df():
         df = list(con.execute(f"SELECT COUNT(*) FROM tf WHERE vocabularyId == {word[0]} AND tf > 0"))
         c.execute(f"INSERT INTO df (vocabularyId, df) VALUES ('{word[0]}', '{df[0][0]}')")
         con.commit()
+    con.close()
 
 
 def vocabulary_len():
+    con = sqlite3.connect(f'{os.path.dirname(__file__)}/data.sqlite')
     c = con.cursor()
     vl = list(c.execute("SELECT COUNT(*) FROM vocabulary"))
+    con.close()
     return vl[0][0]
 
 
 def documents_len():
+    con = sqlite3.connect(f'{os.path.dirname(__file__)}/data.sqlite')
     c = con.cursor()
     dl = list(c.execute("SELECT COUNT(*) FROM documents"))
+    con.close()
     return dl[0][0]
 
 
-def TF(i, j):
+def TF(i, j, con):
     c = con.cursor()
     tf = list(c.execute(f"SELECT tf FROM tf WHERE vocabularyId == {i + 1} AND documentId == {j + 1}"))
     return tf[0][0]
 
 
-def DF(i):
+def DF(i, con):
     c = con.cursor()
     df = list(c.execute(f"SELECT df FROM df WHERE vocabularyId == {i + 1}"))
     return df[0][0]
+
+
+def get_document_preview(id):
+    con = new_connection()
+    c = con.cursor()
+    doc = list(c.execute(f"SELECT title, author, text FROM documents WHERE id == {id}"))[0]
+    con.close()
+    return {
+        'title': doc[0],
+        'author': doc[1],
+        'preview': doc[2][:min(100, len(doc[2]))]
+    }
+
+
+def get_document(id):
+    con = new_connection()
+    c = con.cursor()
+    doc = list(c.execute(f"SELECT title, author, text FROM documents WHERE id == {id}"))[0]
+    con.close()
+    return {
+        'title': doc[0],
+        'author': doc[1],
+        'text': doc[2]
+    }

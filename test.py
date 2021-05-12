@@ -1,6 +1,6 @@
-from parse import parse_queries, parse_rel
-from main import mri
-from metrics import metrics
+from mri.main import mri
+from mri.metrics import metrics
+from mri.parse import parse_queries, parse_rel
 
 
 def test(query_file, rel_file):
@@ -13,6 +13,7 @@ def test(query_file, rel_file):
     for i, key in enumerate(queries):
         try:
             ground_truth = [elem for elem in rels[key]]
+            print(queries[key])
             predicted = [f'{elem}' for elem in mri(queries[key], 10)]
             r, p, f1 = metrics(ground_truth, predicted)
             av_r += r

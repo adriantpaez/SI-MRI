@@ -1,12 +1,14 @@
 import math
+import os
+
 import numpy as np
-import database
-from svd import factorization
-from utils import multiply_sparse
 from scipy.spatial import distance
-from database import load_docs, load_vocabulary2
-import config
 from tqdm import tqdm
+
+from . import database
+from .config import AlreadyInit
+from .svd import factorization
+from .utils import multiply_sparse
 
 
 class Vocabulary:
@@ -33,39 +35,43 @@ class Vocabulary:
                 tf[word] = 1
 
         # calculates td idf for query as pseudo document
+        con = database.new_connection()
         for word in query:
             word = word.lower()
             try:
                 index = self.__indexes__[word]
-                v[index] = tf[word] * (math.log2((N + 1) / (0.5 + database.DF(index))))
+                v[index] = tf[word] * (math.log2((N + 1) / (0.5 + database.DF(index, con))))
             except KeyError:
                 pass
+        con.close()
         return v
 
 
 class DataSet:
     def __init__(self, documents_file):
-        if not config.AlreadyInit:
-            load_docs(documents_file)
-            load_vocabulary2()
+        if not AlreadyInit:
+            database.load_docs(documents_file)
+            database.load_vocabulary2()
             database.calculate_tf()
             database.calculate_df()
         self.W = np.matrix([[0 for _ in range(database.documents_len())] for _ in range(database.vocabulary_len())])
         self.__build_w__()
 
     def __build_w__(self):
-        if config.AlreadyInit:
+        if AlreadyInit:
             print("Load W from W.npy file")
-            self.W = np.load('W.npy')
+            self.W = np.load(f"{os.path.dirname(__file__)}/W.npy")
         else:
             print("Building W matrix")
+            con = database.new_connection()
             N = database.documents_len()
             for i in tqdm(range(database.vocabulary_len()), unit=' word'):
-                df = database.DF(i)
+                df = database.DF(i, con)
                 for j in range(N):
-                    self.W[i, j] = database.TF(i, j) * math.log2((N + 1) / (0.5 + df))
+                    self.W[i, j] = database.TF(i, j, con) * math.log2((N + 1) / (0.5 + df))
+            con.close()
             print("Save W matrix to W.npy file")
-            np.save('W', self.W)
+            np.save(f"{os.path.dirname(__file__)}/W", self.W)
         self.svd = factorization(self.W, 300)
 
     def find_relevance(self, query, k=None):
