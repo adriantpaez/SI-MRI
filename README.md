@@ -2,7 +2,7 @@
 
 > This project is the final evaluation of the Information Systems subject of the Computer Science degree at the University of Havana.
 
-The implementation is based on using SVD decomposition to perform searches. All the theoretical explanation is in the report.
+The implementation is based on SVD as matrix decomposition to perform searches. All the theoretical explanation is in the report.
 
 The application is divided into 3 main parts or stages:
 
